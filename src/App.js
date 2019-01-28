@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import './App.css';
-import Clarifai from 'clarifai';
 import Particles from 'react-particles-js';
 import Navigation from './components/Navigation/Navigation';
 import Logo from './components/Logo/Logo';
@@ -10,9 +9,7 @@ import FaceRecognition from './components/FaceRecognition/FaceRecognition.js';
 import Signin from './components/Signin/Signin.js';
 import Register from './components/Register/Register.js';
 
-const app = new Clarifai.App({
- apiKey: '52d96b6836c44670ba38dcae84bdfd87'
-});
+
 
 const particlesOptions = {
 	particles: {
@@ -26,25 +23,45 @@ const particlesOptions = {
 	}
 }
 
+const initialState = {
+  input: '',
+  imageURL: '',
+  box: {},
+  route: 'signin',
+  isSignedIn: false,
+  user: {
+    id: '',
+    name: '',
+    email: '',
+    entries: 0,
+    joined: ''
+  }
+}
+
 class App extends Component {
   constructor(){
     super();
 
-    this.state= {
-      input: '',
-      imageURL: '',
-      box: {},
-      route: 'signin',
-      isSignedIn: false
-    }
+    this.state= initialState;
+  }
+
+  loadUser = (data) => {
+    this.setState({user: {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      entries: data.entries,
+      joined: data.joined
+    }});
   }
 
   calculateBoundingBox = (data) => {
     const faceData = data.outputs[0].data.regions[0].region_info.bounding_box;
+    // console.log(data.outputs[0].data.regions);
     const image = document.getElementById('input-image');
     const width = Number(image.width);
     const height = Number(image.height);
-    console.log(faceData);
+
     return {
       topRow: faceData.top_row * height,
       rightCol: width - (faceData.right_col * width),
@@ -62,12 +79,40 @@ class App extends Component {
     this.setState({input: event.target.value});
   }
 
-  onButtonSubmit = () => {
+  onPictureSubmit = () => {
     this.setState({imageURL: this.state.input});
-    app.models
-      .predict(Clarifai.FACE_DETECT_MODEL, this.state.input)
-      .then( response => this.displayFaceBox(this.calculateBoundingBox(response)))
-      .catch(err => console.log(err));
+    fetch('http://localhost:3000/imageurl', {
+      method: 'post',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        input: this.state.input
+      })
+    })
+    .then(response => response.json())
+    .then(response => {
+      if(response) {  // .outputs[0].data.regions  ----> if there is an image with a face
+        fetch('http://localhost:3000/image', {
+          method: 'put',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            id: this.state.user.id
+          })
+        })
+          .then(response => response.json())
+          .then(count => {
+            this.setState(Object.assign(this.state.user, {entries: count}))
+          })
+          .catch(console.log)
+          // this.displayFaceBox(this.calculateBoundingBox(response))
+      }
+      // else {
+      //   this.setState({imageURL: ''});
+      //   this.setState({box: {}});
+      //   alert("Broken link or no face image");
+      // }
+      this.displayFaceBox(this.calculateBoundingBox(response))
+    })
+    .catch(err => console.log(err));
   }
 
   onRouteChange = (route) => {
@@ -75,13 +120,13 @@ class App extends Component {
       this.setState({isSignedIn: true});
     }
     else if (route === 'signout') {
-      this.setState({isSignedIn: false});
+      this.setState(initialState);
     }
     this.setState({route: route});
   }
 
   render() {
-    const {isSignedIn, box, imageURL, route } = this.state;
+    const {isSignedIn, box, imageURL, route, user } = this.state;
     return (
       <div className="App">
         <Particles className='particles' params={particlesOptions} />
@@ -89,13 +134,13 @@ class App extends Component {
         { route === 'home'
           ? <div>
               <Logo />
-              <Rank />
-              <ImageLinkForm onInputChange={this.onInputChange} onButtonSubmit={this.onButtonSubmit} />
+              <Rank name={user.name} entries={user.entries}/>
+              <ImageLinkForm onInputChange={this.onInputChange} onPictureSubmit={this.onPictureSubmit} />
               <FaceRecognition box={box} imageURL={imageURL}/>
             </div>
           : (route === 'signin'
-            ? <Signin onRouteChange={this.onRouteChange}/>
-            : <Register onRouteChange={this.onRouteChange}/>)
+            ? <Signin onRouteChange={this.onRouteChange} loadUser={this.loadUser}/>
+          : <Register onRouteChange={this.onRouteChange} loadUser={this.loadUser}/>)
         }
       </div>
     );
@@ -103,3 +148,9 @@ class App extends Component {
 }
 
 export default App;
+
+// componentDidMount() {
+//   fetch('http://localhost:3000')
+//     .then(response => response.json())
+//     .then(console.log);
+// }
