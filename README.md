@@ -1,4 +1,4 @@
-React-Redux app that finds faces in pictures. It uses a face-Recognition API. (See https://clarifai.com/)
+React app that finds faces in pictures. It uses a face-Recognition API. (See https://clarifai.com/)
 
 It is connected to smartbrain-api which has PostgreSQL database connection.
 
