@@ -26,7 +26,7 @@ const particlesOptions = {
 const initialState = {
   input: '',
   imageURL: '',
-  box: {},
+  boxes: [],
   route: 'signin',
   isSignedIn: false,
   user: {
@@ -56,23 +56,26 @@ class App extends Component {
   }
 
   calculateBoundingBox = (data) => {
-    const faceData = data.outputs[0].data.regions[0].region_info.bounding_box;
-    // console.log(data.outputs[0].data.regions);
-    const image = document.getElementById('input-image');
+		const image = document.getElementById('input-image');
     const width = Number(image.width);
     const height = Number(image.height);
 
-    return {
-      topRow: faceData.top_row * height,
-      rightCol: width - (faceData.right_col * width),
-      bottomRow: height - (faceData.bottom_row * height),
-      leftCol: faceData.left_col * width
-    }
+    const faceData = data.outputs[0].data.regions.map( row => {
+			const faceBox = row.region_info.bounding_box;
+
+			return {
+	      topRow: faceBox.top_row * height,
+	      rightCol: width - (faceBox.right_col * width),
+	      bottomRow: height - (faceBox.bottom_row * height),
+	      leftCol: faceBox.left_col * width
+	    }
+		});
+		return faceData;
   }
 
-  displayFaceBox = (box) => {
+  displayFaceBox = (boxes) => {
     // console.log(box);
-    this.setState({box: box});
+    this.setState({boxes: boxes});
   }
 
   onInputChange = (event) => {
@@ -81,7 +84,7 @@ class App extends Component {
 
   onPictureSubmit = () => {
     this.setState({imageURL: this.state.input});
-    fetch('https://infinite-forest-75272.herokuapp.com/imageurl', {
+    fetch('http://localhost:3001/imageurl', {
       method: 'post',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -91,7 +94,7 @@ class App extends Component {
     .then(response => response.json())
     .then(response => {
       if(response) {  // .outputs[0].data.regions  ----> if there is an image with a face
-        fetch('https://infinite-forest-75272.herokuapp.com/image', {
+        fetch('http://localhost:3001/image', {
           method: 'put',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
@@ -126,7 +129,7 @@ class App extends Component {
   }
 
   render() {
-    const {isSignedIn, box, imageURL, route, user } = this.state;
+    const {isSignedIn, boxes, imageURL, route, user } = this.state;
     return (
       <div className="App">
         <Particles className='particles' params={particlesOptions} />
@@ -136,7 +139,7 @@ class App extends Component {
               <Logo />
               <Rank name={user.name} entries={user.entries}/>
               <ImageLinkForm onInputChange={this.onInputChange} onPictureSubmit={this.onPictureSubmit} />
-              <FaceRecognition box={box} imageURL={imageURL}/>
+              <FaceRecognition boxes={boxes} imageURL={imageURL}/>
             </div>
           : (route === 'signin'
             ? <Signin onRouteChange={this.onRouteChange} loadUser={this.loadUser}/>
@@ -150,7 +153,7 @@ class App extends Component {
 export default App;
 
 // componentDidMount() {
-//   fetch('http://localhost:3000')
+//   fetch('http://localhost:3001')
 //     .then(response => response.json())
 //     .then(console.log);
 // }
