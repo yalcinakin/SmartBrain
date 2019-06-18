@@ -49,6 +49,8 @@ class App extends Component {
     this.state= initialState;
   }
 
+	/// Related to Singin
+
 	componentDidMount() {
 		const token = window.localStorage.getItem('token');
 
@@ -64,27 +66,51 @@ class App extends Component {
 			.then(response => response.json())
 			.then( data => {
 				if(data && data.id){
-          fetch(`http://localhost:3001/profile/${data.id}`, {
-						method: 'get',
-						headers:
-						{
-							'Content-Type': 'application/json',
-							'Authorization': token
-						}
-					})
-						.then(resp => resp.json())
-						.then(user => {
-							if(user && user.email){
-								this.loadUser(user);
-								this.onRouteChange('home');
-							}
-						})
-						.catch(console.log)
+					this.getProfile(data.id, token);
         }
 			})
 			.catch(console.log)
 		}
 	}
+
+	onSubmitSignIn = (email, password) => {
+    fetch('http://localhost:3001/signin', {
+      method: 'post',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        email: email,
+        password: password
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        if(data.userId && data.success){
+          this.saveAuthTokenInSession(data.token);
+          this.getProfile(data.userId, data.token)
+        }
+      })
+  }
+
+	getProfile = (id, token) => {
+		fetch(`http://localhost:3001/profile/${id}`, {
+			method: 'get',
+			headers:
+			{
+				'Content-Type': 'application/json',
+				'Authorization': token
+			}
+		})
+			.then(resp => resp.json())
+			.then(user => {
+				if(user && user.email){
+					this.loadUser(user);
+					this.onRouteChange('home');
+				}
+			})
+			.catch(console.log)
+	}
+
+	/// Related to Singin -- Finished
 
   loadUser = (data) => {
     this.setState({user: {
@@ -129,6 +155,19 @@ class App extends Component {
     this.setState({input: event.target.value});
   }
 
+	deleteTokenRequest = (token) => {
+		fetch('http://localhost:3001/signout', {
+			method: 'delete',
+			headers:
+			{
+				'Content-Type': 'application/json',
+				'Authorization': token
+			}
+		})
+		.then(response => response.json())
+		.catch(console.log)
+	}
+
   onPictureSubmit = () => {
     this.setState({imageURL: this.state.input});
     fetch('http://localhost:3001/imageurl', {
@@ -161,11 +200,6 @@ class App extends Component {
           .catch(console.log)
           // this.displayFaceBox(this.calculateBoundingBox(response))
       }
-      // else {
-      //   this.setState({imageURL: ''});
-      //   this.setState({box: {}});
-      //   alert("Broken link or no face image");
-      // }
       this.displayFaceBox(this.calculateBoundingBox(response))
     })
     .catch(err => console.log(err));
@@ -176,6 +210,7 @@ class App extends Component {
       this.setState({isSignedIn: true});
     }
     else if (route === 'signout') {
+			this.deleteTokenRequest(window.localStorage.getItem('token'));
 			window.localStorage.removeItem('token');
       this.setState(initialState);
     }
@@ -187,6 +222,11 @@ class App extends Component {
 			isProfileOpen: !prevState.isProfileOpen
 		}))
 	}
+
+	// Sign in Events
+	saveAuthTokenInSession = (token) => {
+    window.localStorage.setItem('token', token)
+  }
 
   render() {
     const {isSignedIn, boxes, imageURL, route, user, isProfileOpen } = this.state;
@@ -207,8 +247,8 @@ class App extends Component {
               <FaceRecognition boxes={boxes} imageURL={imageURL}/>
             </div>
           : (route === 'register'
-            ? <Register onRouteChange={this.onRouteChange} loadUser={this.loadUser}/>
-						: <Signin onRouteChange={this.onRouteChange} loadUser={this.loadUser}/> )
+            ? <Register onRouteChange={this.onRouteChange}  onSubmitSignIn={this.onSubmitSignIn} loadUser={this.loadUser}/>
+						: <Signin onRouteChange={this.onRouteChange} onSubmitSignIn={this.onSubmitSignIn} loadUser={this.loadUser}/> )
         }
       </div>
     );
