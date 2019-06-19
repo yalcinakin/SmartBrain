@@ -55,6 +55,8 @@ class App extends Component {
 		const token = window.localStorage.getItem('token');
 
 		if(token){
+			this.onRouteChange('loading');
+
 			fetch('http://localhost:3001/signin', {
 				method: 'post',
 				headers:
@@ -110,7 +112,23 @@ class App extends Component {
 			.catch(console.log)
 	}
 
+	saveAuthTokenInSession = (token) => {
+		window.localStorage.setItem('token', token)
+	}
 	/// Related to Singin -- Finished
+
+	deleteTokenRequest = (token) => {
+		fetch('http://localhost:3001/signout', {
+			method: 'delete',
+			headers:
+			{
+				'Content-Type': 'application/json',
+				'Authorization': token
+			}
+		})
+		.then(response => response.json())
+		.catch(console.log)
+	}
 
   loadUser = (data) => {
     this.setState({user: {
@@ -155,19 +173,6 @@ class App extends Component {
     this.setState({input: event.target.value});
   }
 
-	deleteTokenRequest = (token) => {
-		fetch('http://localhost:3001/signout', {
-			method: 'delete',
-			headers:
-			{
-				'Content-Type': 'application/json',
-				'Authorization': token
-			}
-		})
-		.then(response => response.json())
-		.catch(console.log)
-	}
-
   onPictureSubmit = () => {
     this.setState({imageURL: this.state.input});
     fetch('http://localhost:3001/imageurl', {
@@ -206,6 +211,8 @@ class App extends Component {
   }
 
   onRouteChange = (route) => {
+
+		this.setState({route: route});
     if (route === 'home'){
       this.setState({isSignedIn: true});
     }
@@ -214,7 +221,6 @@ class App extends Component {
 			window.localStorage.removeItem('token');
       this.setState(initialState);
     }
-    this.setState({route: route});
   }
 
 	toggleModal = () => {
@@ -223,17 +229,15 @@ class App extends Component {
 		}))
 	}
 
-	// Sign in Events
-	saveAuthTokenInSession = (token) => {
-    window.localStorage.setItem('token', token)
-  }
-
   render() {
     const {isSignedIn, boxes, imageURL, route, user, isProfileOpen } = this.state;
     return (
       <div className="App">
         <Particles className='particles' params={particlesOptions} />
-        <Navigation onRouteChange={this.onRouteChange} isSignedIn={isSignedIn} toggleModal={this.toggleModal} />
+				{
+					route !== 'loading'
+					&& <Navigation onRouteChange={this.onRouteChange} isSignedIn={isSignedIn} toggleModal={this.toggleModal} />
+				}
 				{	isProfileOpen &&
 					 <Modal>
 						<Profile user={this.state.user} toggleModal={this.toggleModal} loadUser={this.loadUser} />
@@ -248,7 +252,11 @@ class App extends Component {
             </div>
           : (route === 'register'
             ? <Register onRouteChange={this.onRouteChange}  onSubmitSignIn={this.onSubmitSignIn} loadUser={this.loadUser}/>
-						: <Signin onRouteChange={this.onRouteChange} onSubmitSignIn={this.onSubmitSignIn} loadUser={this.loadUser}/> )
+						: (route === 'signin'
+								?<Signin onRouteChange={this.onRouteChange} onSubmitSignIn={this.onSubmitSignIn} loadUser={this.loadUser}/>
+								:<div />
+							)
+						)
         }
       </div>
     );
