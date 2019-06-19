@@ -208,6 +208,11 @@ class App extends Component {
       this.displayFaceBox(this.calculateBoundingBox(response))
     })
     .catch(err => console.log(err));
+
+		// to stop resending of same link over and over
+		// this.setState({
+		// 	input: ''
+		// });
   }
 
   onRouteChange = (route) => {
