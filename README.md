@@ -1,6 +1,6 @@
-React app that finds faces in pictures. It uses a face-Recognition API. (See https://clarifai.com/)
+React app that finds faces in pictures. It counts the amount of submitted images and assigns a rank depending on it.
 
-It is connected to smartbrain-api which has PostgreSQL database connection.
+Signing up is necessary in order to use the app.
 
 To run this project:
 1) Clone this repository
